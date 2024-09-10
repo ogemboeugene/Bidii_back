@@ -3,7 +3,7 @@ import secrets
 
 class Config:
     SECRET_KEY = secrets.token_hex(16)
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'postgresql://bidii_7haw_user:bEghWQnF8J6rhCJfq9vy6Gof4MBcilE2@dpg-creuohdsvqrc73fn63jg-a.oregon-postgres.render.com/bidii_7haw'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or os.environ.get('DEV_DATABASE_URL')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_SECRET_KEY = secrets.token_hex(32)
     MAIL_SERVER = 'smtp.gmail.com'

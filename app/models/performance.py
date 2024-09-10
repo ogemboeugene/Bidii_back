@@ -16,6 +16,8 @@ class GroupMonthlyPerformance(db.Model):
     month = db.Column(db.String(20), nullable=False)
     year = db.Column(db.Integer, nullable=False)
 
+    transactions = db.relationship('Transaction', back_populates='group_monthly_performance', cascade='all, delete-orphan')
+
     
 
 class MonthlyPerformance(db.Model):

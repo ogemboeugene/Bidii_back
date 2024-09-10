@@ -39,12 +39,24 @@ class AdvanceService:
 
             # Validate group_id
             group_id = data.get('group_id')
-            group_performance = GroupMonthlyPerformance.query.filter_by(group_id=group_id).first()
-            if not group_performance:
+            results = GroupMonthlyPerformance.query.filter_by(group_id=group_id).with_entities(GroupMonthlyPerformance.member_details).all()
+
+            if not results:
                 raise ValueError(f"Invalid group ID: {group_id}. Please verify the group and try again.")
 
-            # Check if the member_name exists in the group
-            if data['member_name'] not in group_performance.member_details:
+            # Extract member details from the results
+            member_details_list = []
+            for result in results:
+                if isinstance(result.member_details, str):
+                    member_details_list.extend([member.strip() for member in result.member_details.split(',')])
+                else:
+                    member_details_list.extend(list(result.member_details))
+
+            # Log member details for debugging
+            current_app.logger.info(f"Member Details: {member_details_list}")
+
+            # Check if the member_name exists in the group (case-insensitive comparison)
+            if data['member_name'].lower() not in [member.lower() for member in member_details_list]:
                 raise ValueError(f"Member {data['member_name']} is not part of this group. Please verify the member details.")
 
             # Create an Advance instance
@@ -79,15 +91,16 @@ class AdvanceService:
 
         except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.error(f"SQLAlchemy error: {str(e)}\n{traceback.format_exc()}")
             raise Exception("Database error occurred. Please contact support if the problem persists.")
         except ValueError as e:
+            current_app.logger.error(f"ValueError: {str(e)}")
             raise ValueError(str(e))
         except Exception as e:
             # Log the exception for debugging purposes
-            current_app.logger.error(f"Unexpected error: {str(e)}")
+            current_app.logger.error(f"Unexpected error: {str(e)}\n{traceback.format_exc()}")
             raise Exception("An unexpected error occurred. Please try again later.")
 
-        
     @staticmethod
     def make_payment(advance_id, payment_amount, user_id):
         try:

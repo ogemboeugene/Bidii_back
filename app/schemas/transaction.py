@@ -5,3 +5,4 @@ class TransactionSchema(SQLAlchemyAutoSchema):
     class Meta:
         model = Transaction
         load_instance = True
+        include_fk = True 

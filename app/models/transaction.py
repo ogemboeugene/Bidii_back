@@ -21,8 +21,8 @@ class Transaction(db.Model):
     group = db.relationship('MonthlyPerformance', backref=db.backref('transactions', lazy=True))
 
     # Relationship with GroupMonthlyPerformance
-    group_monthly_performance_id = db.Column(db.Integer, db.ForeignKey('group_monthly_performance.id'), nullable=True)
-    group_monthly_performance = db.relationship('GroupMonthlyPerformance', backref=db.backref('transactions', lazy=True))
+    group_monthly_performance_id = db.Column(db.Integer, db.ForeignKey('group_monthly_performance.id',  ondelete='SET NULL'), nullable=True)
+    group_monthly_performance = db.relationship('GroupMonthlyPerformance', back_populates='transactions')
 
     # Relationship with Advance
     advance_id = db.Column(db.Integer, db.ForeignKey('advance.id'), nullable=True)

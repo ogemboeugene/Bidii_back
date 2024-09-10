@@ -29,60 +29,47 @@ def get_histories():
 def generate_form():
     # Retrieve the JWT identity
     jwt_identity = get_jwt_identity()
-    current_user_id = jwt_identity.get('id')  # Extract the user ID from the JWT identity
-    # current_app.logger.debug(f"JWT Identity: {current_user_id}")
+    current_user_id = jwt_identity.get('id')
 
     group_id = request.json.get('group_id')
-    # current_app.logger.debug(f"Received group_id: {group_id}")
 
     if not group_id:
-        # current_app.logger.error('group_id is required')
         return jsonify({'message': 'group_id is required'}), 400
 
     try:
         # Retrieve user based on the JWT identity
         user = User.query.filter_by(id=current_user_id).first()
         if not user:
-            # current_app.logger.error(f"User not found for ID: {current_user_id}")
             return jsonify({'message': 'User not found'}), 404
-        # current_app.logger.debug(f"Current User: {user.username}")
 
         # Retrieve records for the specific group_id from GroupMonthlyPerformance
         records = GroupMonthlyPerformance.query.filter_by(group_id=group_id).all()
-        # current_app.logger.debug(f"Records found: {len(records)}")
 
         if not records:
-            # current_app.logger.error(f"No records found for group_id: {group_id}")
             return jsonify({'message': 'No records found for the given group_id'}), 404
 
         # Query the MonthlyPerformance table to get the group_name using the group_id
         monthly_performance = MonthlyPerformance.query.filter_by(id=group_id).first()
-        if monthly_performance:
-            group_name = monthly_performance.group_name
-        else:
-            group_name = 'Unknown Group'
-        # current_app.logger.debug(f"Group Name: {group_name}")
+        group_name = monthly_performance.group_name if monthly_performance else 'Unknown Group'
 
         # Save records into the History table
         history_entry = History(
             group_name=group_name,
-            created_by=user.username,  # Assuming 'username' is the column for user name
+            created_by=user.id,
             date=datetime.utcnow()
         )
         db.session.add(history_entry)
         db.session.commit()
-        # current_app.logger.debug(f"History Entry Added: {history_entry}")
 
         # Save records into FormRecords table
-        form_records_schema = FormRecordsSchema()
         form_records_to_save = []
         for record in records:
             form_record = FormRecords(
                 history_id=history_entry.id,
                 group_id=record.group_id,
                 member_details=record.member_details,
-                savings_shares_bf=record.savings_shares_cf,
-                loan_balance_bf=record.loan_cf,
+                savings_shares_bf=record.savings_shares_bf,
+                loan_balance_bf=record.loan_balance_bf,
                 total_paid=record.total_paid,
                 principal=record.principal,
                 loan_interest=record.loan_interest,
@@ -96,7 +83,6 @@ def generate_form():
             form_records_to_save.append(form_record)
         db.session.bulk_save_objects(form_records_to_save)
         db.session.commit()
-        # current_app.logger.debug(f"Form Records Saved: {len(form_records_to_save)}")
 
         # Temporarily store the records to re-add after deletion
         records_to_readd = []
@@ -110,17 +96,14 @@ def generate_form():
                 year=record.year
             )
             records_to_readd.append(new_record)
-        # current_app.logger.debug(f"Records to re-add: {len(records_to_readd)}")
 
         # Clear the GroupMonthlyPerformance table for the specific group_id
         GroupMonthlyPerformance.query.filter_by(group_id=group_id).delete()
         db.session.commit()
-        # current_app.logger.debug(f"Cleared records for group_id: {group_id}")
 
         # Re-add records with updated values
         db.session.bulk_save_objects(records_to_readd)
         db.session.commit()
-        # current_app.logger.debug("Records re-added successfully")
 
         return jsonify({
             'message': 'Form generated and records updated successfully',
@@ -128,14 +111,14 @@ def generate_form():
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        # current_app.logger.error(f"SQLAlchemy Error: {str(e)}")
+        current_app.logger.error(f"SQLAlchemy Error: {str(e)}")
         return jsonify({'message': 'A database error occurred', 'error': str(e)}), 500
 
     except Exception as e:
         db.session.rollback()
-        # current_app.logger.error(f"Unexpected Error: {str(e)}")
+        current_app.logger.error(f"Unexpected Error: {str(e)}")
         return jsonify({'message': 'An unexpected error occurred', 'error': str(e)}), 500
-    
+
 # Advance History
 @bp.route('/generate_monthly_form', methods=['POST'])
 @jwt_required()

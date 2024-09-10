@@ -177,6 +177,7 @@ def create_group_performance():
             loan_interest = 0
             principal = 0
             savings_shares_cf = total_paid
+            this_month_shares = total_paid
             loan_cf = 0
         else:
             loan_interest = round_to_nearest_five(loan_balance_bf * 0.015)
